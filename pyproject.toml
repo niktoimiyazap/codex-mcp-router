@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "codexpc-connector"
+version = "0.1.0"
+description = "Secure local computer tools and dynamic Codex MCP routing over MCP stdio"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "niktoimiya" }]
+keywords = ["mcp", "codex", "chatgpt", "local-tools", "model-context-protocol"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "mcp>=1.28.1,<2",
+  "httpx>=0.27,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "bandit>=1.8",
+  "build>=1.2",
+  "pip-audit>=2.8",
+  "ruff>=0.9",
+]
+
+[project.scripts]
+codexpc-connector = "codexpc_connector.server:main"
+
+[project.urls]
+Repository = "https://github.com/niktoimiyazap/codexpc-connector"
+Issues = "https://github.com/niktoimiyazap/codexpc-connector/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["codexpc_connector"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = ["codexpc_connector/local_tools.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
