@@ -1,33 +1,51 @@
 # CodexPC Connector
 
-A local MCP stdio server that gives an MCP client safe file/process tools and dynamically routes every MCP server already configured in Codex.
+An MCP stdio adapter that combines Codex app-server filesystem/MCP routing with a managed local process runner.
 
-## What it does
+## Documentation
 
-- Discovers MCP servers through `codex mcp list --json`; no server names or credentials are hardcoded.
-- Supports Codex `stdio` and `streamable_http` MCP transports.
-- Starts downstream MCP servers only on first use and stops them after an idle timeout.
-- Keeps every downstream MCP lifecycle inside its own async worker to avoid AnyIO cross-task shutdown errors.
-- Exposes bounded file reading, atomic line patches with unified diff, safe deletion, search, direct process execution, optional shell execution, and background task checks.
-- Restricts file access to configured roots and blocks protected system writes unless explicitly confirmed.
-- Redacts secrets from logs and never returns MCP environment values.
-- Stores configuration and rotating logs outside the repository.
+- [Architecture](docs/ARCHITECTURE.md)
+- [Configuration](docs/CONFIGURATION.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Release process](docs/RELEASING.md)
+
+## Architecture
+
+```text
+MCP client
+   |
+   v
+CodexPC Connector
+   |-- guarded text writes and managed process jobs
+   |-- JSON-RPC/JSONL client
+          |
+          v
+     codex app-server
+       |-- fs/*
+       |-- mcpServerStatus/list
+       `-- mcpServer/tool/call
+```
+
+The connector starts one long-lived `codex app-server --stdio` process, performs the initialize handshake, and creates one ephemeral Codex thread for MCP inventory and calls.
+
+The Codex thread permission settings remain unchanged:
+
+```text
+sandbox = danger-full-access
+approvalPolicy = never
+```
 
 ## Requirements
 
 - Python 3.11+
-- Codex CLI available as `codex`
-- MCP servers configured in Codex
+- Codex CLI with `codex app-server` support
+- Codex authentication and MCP servers configured normally in Codex
 
-## Install
+## Install and run
 
 ```bash
 python -m pip install -e .
-```
-
-Run as an MCP stdio server:
-
-```bash
 codexpc-connector
 ```
 
@@ -37,80 +55,108 @@ Windows without installation:
 wrapper.cmd
 ```
 
+## Filesystem tools
+
+- `read_file` reads text with BOM detection and explicit Unicode decoding.
+- `write_file` writes UTF-8 without BOM by default.
+- Writes are atomic by default and may use `expected_sha256` to prevent overwriting a file changed by another process.
+- `list_dir`, `create_directory`, `copy_path`, and `delete_path` use Codex app-server filesystem RPCs.
+- All mutations pass through the allowed-root and protected-write policy.
+
+Useful `write_file` options:
+
+```text
+encoding: utf-8 | utf-8-sig | utf-16-le | cp1251 | system
+newline: preserve | lf | crlf
+overwrite: true | false
+create_parents: true | false
+atomic: true | false
+expected_sha256: optional current file hash
+```
+
+Use `write_file` instead of shell redirection for text files. This avoids Windows PowerShell and console code-page ambiguity.
+
+## Process tools
+
+`run_process` and `run_command` are synchronous by default:
+
+```text
+run_process(program="git", args=["status"])
+-> completed result with exitCode/stdout/stderr
+```
+
+For long-running work, set `background=true`:
+
+```text
+run_process(..., background=true)
+-> job_id
+```
+
+Managed job tools:
+
+- `get_job` reads one job without waiting.
+- `wait` waits up to 30 seconds per call and retains compatibility with older clients.
+- `list_jobs` lists running and recently completed jobs.
+- `cancel_job` terminates the operating-system process tree.
+
+Jobs have explicit states:
+
+```text
+queued, running, completed, failed, timed_out, cancelled, killed
+```
+
+Every process has a timeout. Output is bounded and decoded using UTF-8 first with Windows-compatible fallbacks. Child stdin is isolated from MCP stdio, and child Python processes default to UTF-8 I/O. On Windows, `run_command` supports `auto`, `pwsh`, `powershell`, and `cmd` shells.
+
+## MCP routing
+
+- `mcp_list_servers` and `mcp_list_tools` use `mcpServerStatus/list`.
+- `mcp_search_tools` searches the inventory returned by Codex.
+- `mcp_call` uses `mcpServer/tool/call`.
+
 ## Configuration
 
-The connector creates/reads a local `config.toml` from:
+Configuration is loaded from:
 
 - Windows: `%LOCALAPPDATA%\CodexPCConnector\config.toml`
 - macOS: `~/Library/Application Support/CodexPCConnector/config.toml`
 - Linux: `$XDG_STATE_HOME/codexpc-connector/config.toml`
 
-Copy values from [`config.example.toml`](config.example.toml). Public defaults disable both arbitrary process and shell execution.
+See `config.example.toml`.
 
-Environment overrides:
-
-- `CODEXPC_WORKSPACE`
-- `CODEXPC_ALLOWED_ROOTS` (separated by the operating-system path separator)
-- `CODEXPC_ENABLE_SHELL`
-- `CODEXPC_ENABLE_PROCESS`
-- `CODEXPC_ENABLE_DELETE`
-
-## Local tools
-
-- `connector_status`
-- `set_working_directory`
-- `read_file`
-- `write_file`
-- `patch_file`
-- `delete_file`
-- `list_dir`
-- `search_files`
-- `run_process` (only when process execution is enabled)
-- `run_command` (only when both process and shell execution are enabled)
-- `check_task`
-- `cancel_task`
-
-`patch_file` supports `replace`, `delete`, `insert_before`, and `insert_after`. It can validate an expected SHA-256 and expected original text, preview a unified diff, and then write atomically.
-
-`write_file` creates files atomically. Replacing an existing file requires its current SHA-256 or an explicit `overwrite=true`. `delete_file` can also enforce the expected SHA-256.
-
-## Dynamic Codex MCP tools
-
-- `mcp_list_servers`
-- `mcp_list_tools`
-- `mcp_search_tools`
-- `mcp_call`
-- `mcp_gateway` (backward-compatible alias)
-
-The server list is refreshed from Codex, so adding or removing an MCP in Codex does not require editing this project.
-
-## Security model
-
-This is a local privileged connector. Only attach it to clients and tunnels you trust.
-
-- Public defaults expose neither arbitrary process nor shell execution.
-- File operations are limited to `allowed_roots` after resolving symlinks/junctions.
-- Windows system directories and Unix system roots are protected from writes.
-- `codex mcp list --json` may contain credentials; the connector parses them in memory, passes them only to the matching child process, and logs only environment variable names.
-- Global instruction/credential files are not exposed as tools.
-- Logs contain tool names, timing, counts, and error typesвЂ”not tool arguments or raw outputs.
-
-See [`SECURITY.md`](SECURITY.md) before exposing the connector through any network tunnel.
+Process execution requires `enable_process=true`; shell strings additionally require `enable_shell=true`. These permission switches were not changed in version 0.3.0.
 
 ## Verification
 
 ```bash
-python -m compileall -q codexpc_connector main.py
 python -m ruff check codexpc_connector scripts tests main.py
-python -m bandit -q -r codexpc_connector
 python -m unittest discover -s tests -v
+python scripts/smoke_processes.py
+python scripts/smoke_stdio.py
 python scripts/self_check.py
-python -m pip_audit -r audit-requirements.txt --progress-spinner off
+python -m bandit -q -r codexpc_connector
 ```
 
-## ChatGPT plan note
+Optional coverage:
 
-The connector itself is standard MCP and works with compatible MCP hosts. Direct custom full-MCP apps in ChatGPT are plan-dependent; this repository does not enable unsupported ChatGPT account features and does not open a public HTTP listener by default.
+```bash
+python -m pytest --cov=codexpc_connector --cov-branch
+```
+
+## Support This Project
+
+If CodexPC Connector is useful to you, you can support its development:
+
+[![YooMoney](https://img.shields.io/badge/YooMoney-Support-8B3FFD?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100119516342099/100)
+[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#support-this-project)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-30363D?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/niktoimiyazap)
+
+- YooMoney: [support with 100 RUB or choose another amount](https://yoomoney.ru/to/4100119516342099/100)
+- USDT (TRC20): `0xda2EB9c240816d5e555eA17Aa94E26C83a13C210`
+- GitHub Sponsors: [niktoimiyazap](https://github.com/sponsors/niktoimiyazap)
+
+## Security
+
+This is privileged local software intended for a single trusted user over stdio. Do not expose it directly to a public network. See `SECURITY.md`.
 
 ## License
 
