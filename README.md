@@ -1,18 +1,149 @@
 # CodexPC Connector
 
-An MCP stdio adapter that combines Codex app-server filesystem/MCP routing with a managed local process runner.
+> A local MCP stdio adapter for Codex app-server, guarded filesystem access, managed process execution, and downstream MCP routing.
 
-## Support This Project
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![MCP](https://img.shields.io/badge/Protocol-MCP-111827)](https://modelcontextprotocol.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22C55E.svg)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/niktoimiyazap/codex-mcp-router/test.yml?branch=main&label=tests)](https://github.com/niktoimiyazap/codex-mcp-router/actions)
 
-If CodexPC Connector is useful to you, you can support its development:
+## Support the project
+
+Development is community-supported. Choose any convenient option:
 
 [![YooMoney](https://img.shields.io/badge/YooMoney-Support-8B3FFD?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100119516342099/100)
-[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#support-this-project)
+[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#usdt-trc20)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-30363D?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/niktoimiyazap)
 
-- YooMoney: [support with 100 RUB or choose another amount](https://yoomoney.ru/to/4100119516342099/100)
-- USDT (TRC20): `0xda2EB9c240816d5e555eA17Aa94E26C83a13C210`
-- GitHub Sponsors: [niktoimiyazap](https://github.com/sponsors/niktoimiyazap)
+### USDT TRC20
+
+```text
+Network: TRON (TRC20)
+Token:   USDT
+Address: TXeHE4iYgdf2whpTCWeErerKGAng3sRXK1
+```
+
+> Send only USDT through the TRON network. Transfers through another network may be lost.
+
+## What it does
+
+CodexPC Connector exposes a controlled local tool layer to MCP clients:
+
+- guarded filesystem reads and mutations;
+- atomic UTF-8 writes with conflict protection;
+- synchronous and background process execution;
+- timeouts, cancellation, bounded output, and process-tree termination;
+- downstream MCP inventory, search, and calls through Codex app-server;
+- secret-redacted structured logs and single-instance protection.
+
+## Architecture
+
+```text
+MCP client
+    |
+    v
+CodexPC Connector
+    |-- filesystem policy and UTF-8 validation
+    |-- managed local process jobs
+    `-- JSON-RPC / JSONL client
+             |
+             v
+       codex app-server
+         |-- fs/*
+         |-- mcpServerStatus/list
+         `-- mcpServer/tool/call
+```
+
+The connector starts one long-lived `codex app-server --stdio` process and creates one ephemeral Codex thread for MCP discovery and calls.
+
+## Requirements
+
+- Python 3.11 or newer;
+- Codex CLI with `codex app-server` support;
+- an authenticated Codex installation;
+- MCP servers configured through Codex when downstream routing is needed.
+
+## Quick start
+
+```bash
+git clone https://github.com/niktoimiyazap/codex-mcp-router.git
+cd codex-mcp-router
+python -m pip install -e .
+codexpc-connector
+```
+
+Windows without package installation:
+
+```bat
+wrapper.cmd
+```
+
+## Configuration
+
+Copy `config.example.toml` to the platform state directory:
+
+| Platform | Configuration path |
+|---|---|
+| Windows | `%LOCALAPPDATA%\CodexPCConnector\config.toml` |
+| macOS | `~/Library/Application Support/CodexPCConnector/config.toml` |
+| Linux | `$XDG_STATE_HOME/codexpc-connector/config.toml` |
+
+Minimal example:
+
+```toml
+workspace = "~/projects"
+allowed_roots = ["~/projects"]
+
+enable_process = false
+enable_shell = false
+enable_delete = true
+```
+
+Process execution requires `enable_process=true`. Shell command strings additionally require `enable_shell=true`.
+
+See [Configuration](docs/CONFIGURATION.md) for all options.
+
+## Tool groups
+
+### Filesystem
+
+`read_file`, `write_file`, `list_dir`, `create_directory`, `copy_path`, `delete_path`, `download_url`, `save_uploaded_file`
+
+Text writes are UTF-8 by default, atomic, and reject likely mojibake or legacy-encoding corruption.
+
+### Processes
+
+`run_process`, `run_command`, `get_job`, `wait`, `list_jobs`, `cancel_job`
+
+Background jobs expose explicit states:
+
+```text
+queued, running, completed, failed, timed_out, cancelled, killed
+```
+
+### MCP routing
+
+`mcp_list_servers`, `mcp_list_tools`, `mcp_search_tools`, `mcp_call`
+
+### Connector control
+
+`connector_status`, `list_active_tool_calls`, `cancel_tool_calls`
+
+## Verification
+
+```bash
+python -m ruff check codexpc_connector scripts tests main.py
+python -m unittest discover -s tests -v
+python scripts/self_check.py
+python -m bandit -q -r codexpc_connector
+```
+
+Integration smoke tests:
+
+```bash
+python scripts/smoke_processes.py
+python scripts/smoke_stdio.py
+```
 
 ## Documentation
 
@@ -21,142 +152,11 @@ If CodexPC Connector is useful to you, you can support its development:
 - [Security policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Release process](docs/RELEASING.md)
-
-## Architecture
-
-```text
-MCP client
-   |
-   v
-CodexPC Connector
-   |-- guarded text writes and managed process jobs
-   |-- JSON-RPC/JSONL client
-          |
-          v
-     codex app-server
-       |-- fs/*
-       |-- mcpServerStatus/list
-       `-- mcpServer/tool/call
-```
-
-The connector starts one long-lived `codex app-server --stdio` process, performs the initialize handshake, and creates one ephemeral Codex thread for MCP inventory and calls.
-
-The Codex thread permission settings remain unchanged:
-
-```text
-sandbox = danger-full-access
-approvalPolicy = never
-```
-
-## Requirements
-
-- Python 3.11+
-- Codex CLI with `codex app-server` support
-- Codex authentication and MCP servers configured normally in Codex
-
-## Install and run
-
-```bash
-python -m pip install -e .
-codexpc-connector
-```
-
-Windows without installation:
-
-```bat
-wrapper.cmd
-```
-
-## Filesystem tools
-
-- `read_file` reads text with BOM detection and explicit Unicode decoding.
-- `write_file` writes UTF-8 without BOM by default.
-- Writes are atomic by default and may use `expected_sha256` to prevent overwriting a file changed by another process.
-- `list_dir`, `create_directory`, `copy_path`, and `delete_path` use Codex app-server filesystem RPCs.
-- All mutations pass through the allowed-root and protected-write policy.
-
-Useful `write_file` options:
-
-```text
-encoding: utf-8 | utf-8-sig | utf-16-le | cp1251 | system
-newline: preserve | lf | crlf
-overwrite: true | false
-create_parents: true | false
-atomic: true | false
-expected_sha256: optional current file hash
-```
-
-Use `write_file` instead of shell redirection for text files. This avoids Windows PowerShell and console code-page ambiguity.
-
-## Process tools
-
-`run_process` and `run_command` are synchronous by default:
-
-```text
-run_process(program="git", args=["status"])
--> completed result with exitCode/stdout/stderr
-```
-
-For long-running work, set `background=true`:
-
-```text
-run_process(..., background=true)
--> job_id
-```
-
-Managed job tools:
-
-- `get_job` reads one job without waiting.
-- `wait` waits up to 30 seconds per call and retains compatibility with older clients.
-- `list_jobs` lists running and recently completed jobs.
-- `cancel_job` terminates the operating-system process tree.
-
-Jobs have explicit states:
-
-```text
-queued, running, completed, failed, timed_out, cancelled, killed
-```
-
-Every process has a timeout. Output is bounded and decoded using UTF-8 first with Windows-compatible fallbacks. Child stdin is isolated from MCP stdio, and child Python processes default to UTF-8 I/O. On Windows, `run_command` supports `auto`, `pwsh`, `powershell`, and `cmd` shells.
-
-## MCP routing
-
-- `mcp_list_servers` and `mcp_list_tools` use `mcpServerStatus/list`.
-- `mcp_search_tools` searches the inventory returned by Codex.
-- `mcp_call` uses `mcpServer/tool/call`.
-
-## Configuration
-
-Configuration is loaded from:
-
-- Windows: `%LOCALAPPDATA%\CodexPCConnector\config.toml`
-- macOS: `~/Library/Application Support/CodexPCConnector/config.toml`
-- Linux: `$XDG_STATE_HOME/codexpc-connector/config.toml`
-
-See `config.example.toml`.
-
-Process execution requires `enable_process=true`; shell strings additionally require `enable_shell=true`. These permission switches were not changed in version 0.3.0.
-
-## Verification
-
-```bash
-python -m ruff check codexpc_connector scripts tests main.py
-python -m unittest discover -s tests -v
-python scripts/smoke_processes.py
-python scripts/smoke_stdio.py
-python scripts/self_check.py
-python -m bandit -q -r codexpc_connector
-```
-
-Optional coverage:
-
-```bash
-python -m pytest --cov=codexpc_connector --cov-branch
-```
+- [Changelog](CHANGELOG.md)
 
 ## Security
 
-This is privileged local software intended for a single trusted user over stdio. Do not expose it directly to a public network. See `SECURITY.md`.
+This is privileged local software intended for a single trusted user over MCP stdio. Do not expose it directly to a public network. Review [SECURITY.md](SECURITY.md) before enabling process or shell execution.
 
 ## License
 
