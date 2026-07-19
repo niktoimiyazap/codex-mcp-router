@@ -1,66 +1,53 @@
 # Interactive tunnel setup
 
-This launcher connects the local CodexPC Connector to an existing OpenAI tunnel without storing the runtime API key in the repository or in a generated profile.
+The launcher connects CodexPC Connector to an existing OpenAI tunnel and stores the runtime API key in the operating system credential vault.
 
-## Before running
+- Windows: **Credential Manager**
+- macOS: **Keychain**
 
-You need:
+The key is entered once on the first launch. Later launches reuse it automatically.
 
-1. Python 3.11 or newer.
-2. CodexPC Connector installed from this repository.
-3. `tunnel-client` installed and available in `PATH`.
-4. A tunnel ID from OpenAI Platform **Organization → Tunnels**.
-5. A runtime API key whose principal has **Tunnels Read + Use**.
+## Run
 
-The tunnel ID and runtime API key are different values. An admin key is not required to run an existing tunnel.
-
-## Windows
-
-From PowerShell or Command Prompt in the repository directory:
+### Windows
 
 ```bat
 launch-tunnel.cmd
 ```
 
-## macOS
-
-From Terminal in the repository directory:
+### macOS
 
 ```bash
 chmod +x launch-tunnel.sh
 ./launch-tunnel.sh
 ```
 
-## Questions asked by the launcher
+The launcher asks for the organization label, local profile name, and Tunnel ID. The API key is requested only when no saved key exists.
 
-- **Organization name** — an optional local label; it is not transmitted as authentication.
-- **Local profile name** — defaults to `codexpc`.
-- **Tunnel ID** — must have the form `tunnel_` plus 32 lowercase hexadecimal characters.
-- **Runtime API key** — entered invisibly and used only by the running process.
+## Replace or remove the saved key
 
-The launcher creates or updates a local `tunnel-client` profile, runs `doctor --explain`, and starts the tunnel. It binds the tunnel to:
+```bash
+python scripts/setup_tunnel.py --replace-key
+python scripts/setup_tunnel.py --forget-key
+```
+
+For a non-default profile, add `--profile NAME`.
+
+## Requirements
+
+- Python 3.11+
+- `tunnel-client` available in `PATH`
+- Tunnel ID from OpenAI Platform
+- Runtime API key with Tunnels Read + Use
+
+The launcher creates or updates the local profile, runs `doctor --explain`, and starts the tunnel with:
 
 ```text
 python -m codexpc_connector
 ```
 
-Keep the terminal open while ChatGPT uses the connector. Press `Ctrl+C` to stop it.
+Keep the terminal open while the connector is in use. Press `Ctrl+C` to stop it.
 
-## Security notes
+## Security
 
-- The runtime key is never written by this launcher.
-- Do not commit profiles containing literal keys.
-- Prefer `env:CONTROL_PLANE_API_KEY` references in manually written profiles.
-- Revoke and replace a key immediately if it appears in a script, shell history, screenshot, log, or public repository.
-- Do not use an OpenAI admin key for the long-lived tunnel process.
-
-## Troubleshooting
-
-**`tunnel-client was not found in PATH`**  
-Install the supported binary from OpenAI Platform Tunnels management, then reopen the terminal.
-
-**Doctor reports missing permissions**  
-The runtime-key principal needs Tunnels Read + Use for the selected tunnel.
-
-**The connector exists but ChatGPT cannot use it**  
-Confirm that `doctor` succeeds, the terminal remains open, and the matching connector is enabled in ChatGPT settings.
+The key is never written to the repository, shell script, tunnel profile, or plain-text config. Revoke any key that has previously appeared in a script, log, screenshot, or public repository.
