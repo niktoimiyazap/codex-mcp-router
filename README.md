@@ -2,6 +2,18 @@
 
 An MCP stdio adapter that combines Codex app-server filesystem/MCP routing with a managed local process runner.
 
+## Support This Project
+
+If CodexPC Connector is useful to you, you can support its development:
+
+[![YooMoney](https://img.shields.io/badge/YooMoney-Support-8B3FFD?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100119516342099/100)
+[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#support-this-project)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-30363D?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/niktoimiyazap)
+
+- YooMoney: [support with 100 RUB or choose another amount](https://yoomoney.ru/to/4100119516342099/100)
+- USDT (TRC20): `0xda2EB9c240816d5e555eA17Aa94E26C83a13C210`
+- GitHub Sponsors: [niktoimiyazap](https://github.com/sponsors/niktoimiyazap)
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md)
@@ -141,18 +153,6 @@ Optional coverage:
 ```bash
 python -m pytest --cov=codexpc_connector --cov-branch
 ```
-
-## Support This Project
-
-If CodexPC Connector is useful to you, you can support its development:
-
-[![YooMoney](https://img.shields.io/badge/YooMoney-Support-8B3FFD?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100119516342099/100)
-[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#support-this-project)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-30363D?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/niktoimiyazap)
-
-- YooMoney: [support with 100 RUB or choose another amount](https://yoomoney.ru/to/4100119516342099/100)
-- USDT (TRC20): `0xda2EB9c240816d5e555eA17Aa94E26C83a13C210`
-- GitHub Sponsors: [niktoimiyazap](https://github.com/sponsors/niktoimiyazap)
 
 ## Security
 
