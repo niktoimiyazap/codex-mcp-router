@@ -91,7 +91,7 @@ chmod +x launch-tunnel.sh
 ./launch-tunnel.sh
 ```
 
-The launcher asks for the tunnel ID and runtime API key, validates the setup, and starts `tunnel-client`. The key is hidden during input and is not saved. See [Interactive tunnel setup](docs/TUNNEL_SETUP.md).
+The launcher asks for the tunnel details once and stores the runtime API key in Windows Credential Manager or macOS Keychain. Later launches reuse it automatically. See [Interactive tunnel setup](docs/TUNNEL_SETUP.md).
 
 ## Configuration
 
