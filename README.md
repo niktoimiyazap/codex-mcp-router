@@ -1,29 +1,13 @@
 # CodexPC Connector
 
+[English](README.md) | [Русский](README.ru.md)
+
 > A local MCP stdio adapter for Codex app-server, guarded filesystem access, managed process execution, and downstream MCP routing.
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP-111827)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E.svg)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/niktoimiyazap/codex-mcp-router/test.yml?branch=main&label=tests)](https://github.com/niktoimiyazap/codex-mcp-router/actions)
-
-## Support the project
-
-Development is community-supported. Choose any convenient option:
-
-[![YooMoney](https://img.shields.io/badge/YooMoney-Support-8B3FFD?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100119516342099/100)
-[![USDT](https://img.shields.io/badge/USDT-TRC20-26A17B?style=for-the-badge)](#usdt-trc20)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsors-30363D?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/niktoimiyazap)
-
-### USDT TRC20
-
-```text
-Network: TRON (TRC20)
-Token:   USDT
-Address: TXeHE4iYgdf2whpTCWeErerKGAng3sRXK1
-```
-
-> Send only USDT through the TRON network. Transfers through another network may be lost.
 
 ## What it does
 
