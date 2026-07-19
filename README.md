@@ -78,6 +78,21 @@ Windows without package installation:
 wrapper.cmd
 ```
 
+## Interactive tunnel launcher
+
+Connect this local MCP server to an existing OpenAI tunnel without placing API keys in files:
+
+```bat
+launch-tunnel.cmd
+```
+
+```bash
+chmod +x launch-tunnel.sh
+./launch-tunnel.sh
+```
+
+The launcher asks for the tunnel ID and runtime API key, validates the setup, and starts `tunnel-client`. The key is hidden during input and is not saved. See [Interactive tunnel setup](docs/TUNNEL_SETUP.md).
+
 ## Configuration
 
 Copy `config.example.toml` to the platform state directory:
@@ -149,6 +164,7 @@ python scripts/smoke_stdio.py
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Configuration](docs/CONFIGURATION.md)
+- [Interactive tunnel setup](docs/TUNNEL_SETUP.md)
 - [Security policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Release process](docs/RELEASING.md)
